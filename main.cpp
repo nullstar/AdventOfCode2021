@@ -1,6 +1,8 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <algorithm>
+#include <vector>
 
 
 
@@ -136,10 +138,139 @@ void Day02Puzzle2()
 
 
 
+void Day03Puzzle1()
+{
+	std::ifstream dataStream("diagnosticReport.txt");
+
+	constexpr uint16_t numBits = 12;
+	uint16_t numSamples = 0;
+	uint16_t bitCounts[12] = {};
+
+	std::string sample;
+	while(std::getline(dataStream, sample))
+	{
+		++numSamples;
+		for(uint16_t i = 0; i < numBits; ++i)
+			if(sample[i] == '1')
+				++bitCounts[i];
+	}
+
+	const uint16_t halfNumSamples = numSamples / 2;
+
+	uint16_t gammaRate = 0;
+	for(uint16_t i = 0; i < numBits; ++i)
+		if(bitCounts[i] > halfNumSamples)
+			gammaRate |= 1 << (numBits - i - 1);
+
+	const uint16_t epsilonRate = ~gammaRate & 0b0000111111111111;
+
+	std::cout << "Advent of Code Day 3 Puzzle 1" << std::endl;
+	std::cout << "GammaRate * EpsilonRate = " << gammaRate * epsilonRate << std::endl;
+	std::cout << std::endl;
+}
+
+
+
+void Day03Puzzle2()
+{
+	std::ifstream dataStream("diagnosticReport.txt");	
+
+	constexpr uint16_t numBits = 12;
+
+	// gather samples
+	std::vector<uint16_t> samples;
+	samples.reserve(1000);
+
+	std::string sampleText;
+	while(std::getline(dataStream, sampleText))
+	{
+		uint16_t sample = 0;
+		for(uint16_t i = 0; i < numBits; ++i)
+			if(sampleText[i] == '1')
+				sample |= 1 << (numBits - i - 1);
+		samples.push_back(sample);
+	}
+
+	// sort according to bits
+	std::sort(samples.begin(), samples.end(), [numBits](const uint16_t& a, const uint16_t& b) -> bool
+	{
+		for(uint16_t i = 0; i < numBits; ++i)
+		{
+			const uint16_t bitMask = 1 << (numBits - i - 1);
+			const bool aSet = a & bitMask;
+			const bool bSet = b & bitMask;
+			
+			if(aSet != bSet)
+				return aSet;
+		}
+		return true;
+	});
+
+	// find oxygen rating
+	uint16_t startIndex = 0;
+	uint16_t endIndex = (uint16_t)samples.size();
+	uint16_t bitIndex = numBits - 1;
+
+	while(startIndex + 1 != endIndex)
+	{
+		const uint16_t bitMask = 1 << bitIndex;
+		const uint16_t samplesInRange = endIndex - startIndex;
+
+		uint16_t splitIndex = 0;
+		for(splitIndex = startIndex; splitIndex < endIndex; ++splitIndex)
+			if((samples[splitIndex] & bitMask) == 0)
+				break;
+
+		const uint16_t numSetSamples = splitIndex - startIndex;
+		if(numSetSamples >= samplesInRange - numSetSamples)
+			endIndex = splitIndex;
+		else
+			startIndex = splitIndex;
+
+		--bitIndex;
+	}
+
+	const uint16_t oxygenRating = samples[startIndex];
+
+	// find co2 rating
+	startIndex = 0;
+	endIndex = (uint16_t)samples.size();
+	bitIndex = numBits - 1;
+
+	while(startIndex + 1 != endIndex)
+	{
+		const uint16_t bitMask = 1 << bitIndex;
+		const uint16_t samplesInRange = endIndex - startIndex;
+
+		uint16_t splitIndex = 0;
+		for(splitIndex = startIndex; splitIndex < endIndex; ++splitIndex)
+			if((samples[splitIndex] & bitMask) == 0)
+				break;
+
+		const uint16_t numSetSamples = splitIndex - startIndex;
+		if(numSetSamples < samplesInRange - numSetSamples)
+			endIndex = splitIndex;
+		else
+			startIndex = splitIndex;
+
+		--bitIndex;
+	}
+
+	const uint16_t co2Rating = samples[startIndex];
+	
+	std::cout << "Advent of Code Day 3 Puzzle 2" << std::endl;
+	std::cout << "Life support rating = " << oxygenRating * co2Rating << std::endl;
+	std::cout << std::endl;
+}
+
+
+
 int main()
 {
 	Day01Puzzle1();
 	Day01Puzzle2();
 	Day02Puzzle1();
 	Day02Puzzle2();
+	Day03Puzzle1();
+	Day03Puzzle2();
 }
