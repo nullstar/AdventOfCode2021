@@ -184,13 +184,7 @@ void Day03Puzzle2()
 
 	std::string sampleText;
 	while(std::getline(dataStream, sampleText))
-	{
-		uint16_t sample = 0;
-		for(uint16_t i = 0; i < numBits; ++i)
-			if(sampleText[i] == '1')
-				sample |= 1 << (numBits - i - 1);
-		samples.push_back(sample);
-	}
+		samples.push_back(std::stoi(sampleText, 0, 2));
 
 	// sort according to bits
 	std::sort(samples.begin(), samples.end(), [numBits](const uint16_t& a, const uint16_t& b) -> bool
