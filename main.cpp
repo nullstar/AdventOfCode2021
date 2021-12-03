@@ -187,7 +187,7 @@ void Day03Puzzle2()
 		samples.push_back(std::stoi(sampleText, 0, 2));
 
 	// sort according to bits
-	std::sort(samples.begin(), samples.end(), [numBits](const uint16_t& a, const uint16_t& b) -> bool
+	std::sort(samples.begin(), samples.end(), [](const uint16_t& a, const uint16_t& b) -> bool
 	{
 		return a > b;
 	});
