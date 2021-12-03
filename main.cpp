@@ -195,16 +195,7 @@ void Day03Puzzle2()
 	// sort according to bits
 	std::sort(samples.begin(), samples.end(), [numBits](const uint16_t& a, const uint16_t& b) -> bool
 	{
-		for(uint16_t i = 0; i < numBits; ++i)
-		{
-			const uint16_t bitMask = 1 << (numBits - i - 1);
-			const bool aSet = a & bitMask;
-			const bool bSet = b & bitMask;
-			
-			if(aSet != bSet)
-				return aSet;
-		}
-		return true;
+		return a > b;
 	});
 
 	// find rating
@@ -237,14 +228,14 @@ void Day03Puzzle2()
 	};
 
 	const uint16_t oxygenRating = findRating([](uint16_t numSamples, uint16_t samplesInRange) -> bool
-		{
-			return numSamples >= samplesInRange - numSamples;
-		});
+	{
+		return numSamples >= samplesInRange - numSamples;
+	});
 
 	const uint16_t co2Rating = findRating([](uint16_t numSamples, uint16_t samplesInRange) -> bool
-		{
-			return numSamples < samplesInRange - numSamples;
-		});
+	{
+		return numSamples < samplesInRange - numSamples;
+	});
 	
 	std::cout << "Advent of Code Day 3 Puzzle 2" << std::endl;
 	std::cout << "Life support rating = " << oxygenRating * co2Rating << std::endl;
