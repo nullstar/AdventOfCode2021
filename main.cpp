@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <functional>
 #include <vector>
 
 
@@ -206,57 +207,44 @@ void Day03Puzzle2()
 		return true;
 	});
 
-	// find oxygen rating
-	uint16_t startIndex = 0;
-	uint16_t endIndex = (uint16_t)samples.size();
-	uint16_t bitIndex = numBits - 1;
-
-	while(startIndex + 1 != endIndex)
+	// find rating
+	const auto findRating = [&](std::function<bool(uint16_t numSamples, uint16_t samplesInRange)> compare) -> uint16_t
 	{
-		const uint16_t bitMask = 1 << bitIndex;
-		const uint16_t samplesInRange = endIndex - startIndex;
+		uint16_t startIndex = 0;
+		uint16_t endIndex = (uint16_t)samples.size();
+		uint16_t bitIndex = numBits - 1;
 
-		uint16_t splitIndex = 0;
-		for(splitIndex = startIndex; splitIndex < endIndex; ++splitIndex)
-			if((samples[splitIndex] & bitMask) == 0)
-				break;
+		while(startIndex + 1 != endIndex)
+		{
+			const uint16_t bitMask = 1 << bitIndex;
+			const uint16_t samplesInRange = endIndex - startIndex;
 
-		const uint16_t numSetSamples = splitIndex - startIndex;
-		if(numSetSamples >= samplesInRange - numSetSamples)
-			endIndex = splitIndex;
-		else
-			startIndex = splitIndex;
+			uint16_t splitIndex = 0;
+			for(splitIndex = startIndex; splitIndex < endIndex; ++splitIndex)
+				if((samples[splitIndex] & bitMask) == 0)
+					break;
 
-		--bitIndex;
-	}
+			const uint16_t numSetSamples = splitIndex - startIndex;
+			if(compare(numSetSamples, samplesInRange))
+				endIndex = splitIndex;
+			else
+				startIndex = splitIndex;
 
-	const uint16_t oxygenRating = samples[startIndex];
+			--bitIndex;
+		}
 
-	// find co2 rating
-	startIndex = 0;
-	endIndex = (uint16_t)samples.size();
-	bitIndex = numBits - 1;
+		return samples[startIndex];
+	};
 
-	while(startIndex + 1 != endIndex)
-	{
-		const uint16_t bitMask = 1 << bitIndex;
-		const uint16_t samplesInRange = endIndex - startIndex;
+	const uint16_t oxygenRating = findRating([](uint16_t numSamples, uint16_t samplesInRange) -> bool
+		{
+			return numSamples >= samplesInRange - numSamples;
+		});
 
-		uint16_t splitIndex = 0;
-		for(splitIndex = startIndex; splitIndex < endIndex; ++splitIndex)
-			if((samples[splitIndex] & bitMask) == 0)
-				break;
-
-		const uint16_t numSetSamples = splitIndex - startIndex;
-		if(numSetSamples < samplesInRange - numSetSamples)
-			endIndex = splitIndex;
-		else
-			startIndex = splitIndex;
-
-		--bitIndex;
-	}
-
-	const uint16_t co2Rating = samples[startIndex];
+	const uint16_t co2Rating = findRating([](uint16_t numSamples, uint16_t samplesInRange) -> bool
+		{
+			return numSamples < samplesInRange - numSamples;
+		});
 	
 	std::cout << "Advent of Code Day 3 Puzzle 2" << std::endl;
 	std::cout << "Life support rating = " << oxygenRating * co2Rating << std::endl;
