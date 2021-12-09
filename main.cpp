@@ -617,17 +617,6 @@ void Day08()
 	constexpr int numSegments = 7;
 	constexpr int numSingleDigits = 10;
 
-	enum class E_SegmentBit : int
-	{
-		a,
-		b,
-		c,
-		d,
-		e,
-		f,
-		g
-	};
-
 	struct DisplayEntry
 	{
 		std::bitset<8> m_signalPatterns[numSignalPatterns] = {};
