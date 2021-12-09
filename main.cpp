@@ -879,6 +879,215 @@ void Day08()
 }
 
 
+void Day09()
+{
+	std::ifstream dataStream("lavaTubes.txt");
+
+	// get depth data
+	std::vector<int> depthData;
+	int gridWidth = 0;
+	int gridHeight = 0;
+
+	std::string dataLine;
+	while(std::getline(dataStream, dataLine))
+	{
+		gridWidth = dataLine.size();
+		++gridHeight;
+		for(int i = 0; i < gridWidth; ++i)
+			depthData.push_back(dataLine[i] - '0');
+	}
+
+	// depth access
+	const auto getGridIndex = [&](int x, int y) -> int
+	{
+		return x + y * gridWidth;
+	};
+
+	const auto getCoords = [&](int gridIndex, int& x, int& y) -> void
+	{
+		y = gridIndex / gridWidth;
+		x = gridIndex % gridWidth;
+	};
+
+	const auto getDepth = [&](int x, int y) -> int
+	{
+		return depthData[getGridIndex(x, y)];
+	};
+
+	// find risk level and basins
+	int riskLevel = 0;
+	std::vector<int> basinSizes;
+	const int lastX = gridWidth - 1;
+	const int lastY = gridHeight - 1;
+
+	const auto calculateBasinSize = [&](int xLowest, int yLowest) -> void
+	{
+		std::vector<int> visited;
+		std::vector<int> unvisited;
+		unvisited.push_back(getGridIndex(xLowest, yLowest));
+
+		const auto canVisit = [&](int gridIndex) -> bool
+		{
+			if(depthData[gridIndex] == 9)
+				return false;
+
+			for(int visitedGridIndex : visited)
+				if(visitedGridIndex == gridIndex)
+					return false;
+
+			for(int unvisitedGridIndex : unvisited)
+				if(unvisitedGridIndex == gridIndex)
+					return false;
+
+			return true;
+		};
+
+		while(unvisited.size())
+		{
+			const int gridIndex = unvisited.back();
+			unvisited.pop_back();
+			visited.push_back(gridIndex);
+
+			int startX, startY;
+			getCoords(gridIndex, startX, startY);
+
+			if(startY > 0)
+			{
+				const int nextGridIndex = getGridIndex(startX, startY - 1);
+				if(canVisit(nextGridIndex))
+					unvisited.push_back(nextGridIndex);
+			}
+
+			if(startY < lastY)
+			{
+				const int nextGridIndex = getGridIndex(startX, startY + 1);
+				if(canVisit(nextGridIndex))
+					unvisited.push_back(nextGridIndex);
+			}
+
+			if(startX > 0)
+			{
+				const int nextGridIndex = getGridIndex(startX - 1, startY);
+				if(canVisit(nextGridIndex))
+					unvisited.push_back(nextGridIndex);
+			}
+
+			if(startX < lastX)
+			{
+				const int nextGridIndex = getGridIndex(startX + 1, startY);
+				if(canVisit(nextGridIndex))
+					unvisited.push_back(nextGridIndex);
+			}
+		}
+
+		basinSizes.push_back(visited.size());
+	};
+
+	// visit corners
+	const int tlCornerDepth = getDepth(0, 0);
+	if(tlCornerDepth < getDepth(1, 0) && tlCornerDepth < getDepth(0, 1)) 
+	{ 
+		riskLevel += 1 + tlCornerDepth; 
+		calculateBasinSize(0, 0);
+	}
+
+	const int trCornerDepth = getDepth(lastX, 0);
+	if(trCornerDepth < getDepth(lastX - 1, 0) && trCornerDepth < getDepth(lastX, 1)) 
+	{ 
+		riskLevel += 1 + trCornerDepth; 
+		calculateBasinSize(lastX, 0);
+	}
+
+	const int blCornerDepth = getDepth(0, lastY);
+	if(blCornerDepth < getDepth(1, lastY) && blCornerDepth < getDepth(0, lastY - 1)) 
+	{ 
+		riskLevel += 1 + blCornerDepth; 
+		calculateBasinSize(0, lastY);
+	}
+
+	const int brCornerDepth = getDepth(lastX, lastY);
+	if(brCornerDepth < getDepth(lastX - 1, lastY) && brCornerDepth < getDepth(lastX, lastY - 1))
+	{ 
+		riskLevel += 1 + brCornerDepth; 
+		calculateBasinSize(lastX, lastY);
+	}
+
+	// visit edges
+	for(int x = 1; x < lastX; ++x)
+	{
+		const int tDepth = getDepth(x, 0);
+		if(tDepth < getDepth(x - 1, 0) && tDepth < getDepth(x + 1, 0) && tDepth < getDepth(x, 1)) 
+		{ 
+			riskLevel += 1 + tDepth; 
+			calculateBasinSize(x, 0);
+		}
+
+		const int bDepth = getDepth(x, lastY);
+		if(bDepth < getDepth(x - 1, lastY) && bDepth < getDepth(x + 1, lastY) && bDepth < getDepth(x, lastY - 1)) 
+		{ 
+			riskLevel += 1 + bDepth; 
+			calculateBasinSize(x, lastY);
+		}
+	}
+
+	for(int y = 1; y < lastY; ++y)
+	{
+		const int lDepth = getDepth(0, y);
+		if(lDepth < getDepth(0, y - 1) && lDepth < getDepth(0, y + 1) && lDepth < getDepth(1, y)) 
+		{
+			riskLevel += 1 + lDepth; 
+			calculateBasinSize(0, y);
+		}
+
+		const int rDepth = getDepth(lastX, y);
+		if(rDepth < getDepth(lastX, y - 1) && rDepth < getDepth(lastX, y + 1) && rDepth < getDepth(lastX - 1, y)) 
+		{ 
+			riskLevel += 1 + rDepth; 
+			calculateBasinSize(lastX, y);
+		}
+	}
+
+	// visit central locations
+	for(int x = 1; x < lastX; ++x)
+	{
+		for(int y = 1; y < lastY; ++y)
+		{
+			const int depth = getDepth(x, y);
+			const int uDepth = getDepth(x, y - 1);
+			const int dDepth = getDepth(x, y + 1);
+			const int lDepth = getDepth(x - 1, y);
+			const int rDepth = getDepth(x + 1, y);
+
+			if(depth < uDepth
+				&& depth < dDepth
+				&& depth < lDepth
+				&& depth < rDepth)
+			{
+				riskLevel += 1 + depth;
+				calculateBasinSize(x, y);
+			}
+		}
+	}
+
+	// find largest 3 basins
+	std::sort(basinSizes.begin(), basinSizes.end(), [](const int& a, const int& b) -> bool
+	{
+		return a > b;
+	});
+
+	int largestBasinProduct = basinSizes[0] * basinSizes[1] * basinSizes[2];
+
+	// output
+	std::cout << "Advent of Code Day 9 Puzzle 1" << std::endl;
+	std::cout << "Risk level = " << riskLevel << std::endl;
+	std::cout << std::endl;
+
+	std::cout << "Advent of Code Day 9 Puzzle 2" << std::endl;
+	std::cout << "Largett Basin size product = " << largestBasinProduct << std::endl;
+	std::cout << std::endl;
+}
+
+
 
 int main()
 {
@@ -893,4 +1102,5 @@ int main()
 	Day06();
 	Day07();
 	Day08();
+	Day09();
 }
