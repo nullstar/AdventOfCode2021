@@ -1088,6 +1088,92 @@ void Day09()
 }
 
 
+void Day10()
+{
+	std::ifstream dataStream("syntax.txt");
+
+	int syntaxErrorScore = 0;
+	std::vector<uint64_t> autoCompleteScores;
+
+	std::string dataLine;
+	while(std::getline(dataStream, dataLine))
+	{
+		std::vector<char> parsedSyntax;
+		bool errorFound = false;
+
+		// parse line and search for syntax errors
+		for(char ch : dataLine)
+		{
+			switch(ch)
+			{
+			case '(':
+			case '[':
+			case '{':
+			case '<':
+				parsedSyntax.push_back(ch);
+				break;
+
+			case ')':
+				if(parsedSyntax.size() > 0 && parsedSyntax.back() == '(') { parsedSyntax.pop_back(); }
+				else { errorFound = true; syntaxErrorScore += 3; }
+				break;
+
+			case ']':
+				if(parsedSyntax.size() > 0 && parsedSyntax.back() == '[') { parsedSyntax.pop_back(); }
+				else { errorFound = true; syntaxErrorScore += 57; }
+				break;
+
+			case '}':
+				if(parsedSyntax.size() > 0 && parsedSyntax.back() == '{') { parsedSyntax.pop_back(); }
+				else { errorFound = true; syntaxErrorScore += 1197; }
+				break;
+
+			case '>':
+				if(parsedSyntax.size() > 0 && parsedSyntax.back() == '<') { parsedSyntax.pop_back(); }
+				else { errorFound = true; syntaxErrorScore += 25137; }
+				break;
+			}
+
+			if(errorFound)
+				break;
+		}
+
+		// if no errors found then determine autocomplete score
+		if(!errorFound)
+		{
+			uint64_t autoCompleteScore = 0;
+			while(parsedSyntax.size())
+			{
+				char ch = parsedSyntax.back();
+				parsedSyntax.pop_back();
+
+				autoCompleteScore *= 5;
+				switch(ch)
+				{
+				case '(': autoCompleteScore += 1; break;
+				case '[': autoCompleteScore += 2; break;
+				case '{': autoCompleteScore += 3; break;
+				case '<': autoCompleteScore += 4; break;
+				}
+			}
+			autoCompleteScores.push_back(autoCompleteScore);
+		}
+	}
+
+	// find middle auto complete score
+	std::sort(autoCompleteScores.begin(), autoCompleteScores.end());
+	const uint64_t midAutoCompleteScore = autoCompleteScores[autoCompleteScores.size() / 2];
+
+	std::cout << "Advent of Code Day 10 Puzzle 1" << std::endl;
+	std::cout << "Syntax error score = " << syntaxErrorScore << std::endl;
+	std::cout << std::endl;
+
+	std::cout << "Advent of Code Day 10 Puzzle 2" << std::endl;
+	std::cout << "Auto complete score = " << midAutoCompleteScore << std::endl;
+	std::cout << std::endl;
+}
+
+
 
 int main()
 {
@@ -1103,4 +1189,5 @@ int main()
 	Day07();
 	Day08();
 	Day09();
+	Day10();
 }
