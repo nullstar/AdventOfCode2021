@@ -1174,6 +1174,80 @@ void Day10()
 }
 
 
+void Day11()
+{
+	std::ifstream dataStream("dumboOctopus.txt");
+
+	constexpr int gridSize = 10;
+	constexpr int numOctopi = gridSize * gridSize;
+	int energyLevels[numOctopi] = {};
+
+	for(int x = 0; x < gridSize; ++x)
+	{
+		std::string dataLine;
+		std::getline(dataStream, dataLine);
+		for(int y = 0; y < gridSize; ++y)
+			energyLevels[x + y * gridSize] = dataLine[y] - '0';
+	}
+
+	constexpr int flashEnergy = 10;
+	uint64_t numFlashesAfter100Steps = 0;
+	uint64_t numSteps = 0;
+	bool syncronisedFlash = false;
+
+	while(!syncronisedFlash)
+	{
+		++numSteps;
+		std::vector<int> flashIndices;
+
+		// increase energy levels of all octopi by 1
+		for(int i = 0; i < numOctopi; ++i)
+			if(++energyLevels[i] == flashEnergy)
+				flashIndices.push_back(i);
+
+		// resolve flashes
+		while(flashIndices.size())
+		{
+			if(numSteps <= 100)
+				++numFlashesAfter100Steps;
+
+			const int flashIndex = flashIndices.back();
+			flashIndices.pop_back();
+			const int flashCoordX = flashIndex % gridSize;
+			const int flashCoordY = flashIndex / gridSize;
+
+			for(int x = std::max(flashCoordX - 1, 0); x <= std::min(flashCoordX + 1, gridSize - 1); ++x)
+			{
+				for(int y = std::max(flashCoordY - 1, 0); y <= std::min(flashCoordY + 1, gridSize - 1); ++y)
+				{
+					const int effectedIndex = x + y * gridSize;
+					if(++energyLevels[effectedIndex] == flashEnergy)
+						flashIndices.push_back(effectedIndex);
+				}
+			}
+		}
+
+		// reset energy levels of flashed octopi and check for syncronised flash
+		syncronisedFlash = true;
+		for(int i = 0; i < numOctopi; ++i)
+		{
+			if(energyLevels[i] >= flashEnergy)
+				energyLevels[i] = 0;
+			else
+				syncronisedFlash = false;
+		}
+	}
+
+	std::cout << "Advent of Code Day 11 Puzzle 1" << std::endl;
+	std::cout << "Num flashes after 100 steps = " << numFlashesAfter100Steps << std::endl;
+	std::cout << std::endl;
+
+	std::cout << "Advent of Code Day 11 Puzzle 2" << std::endl;
+	std::cout << "Num steps for syncronised flash = " << numSteps << std::endl;
+	std::cout << std::endl;
+}
+
+
 
 int main()
 {
@@ -1190,4 +1264,5 @@ int main()
 	Day08();
 	Day09();
 	Day10();
+	Day11();
 }
