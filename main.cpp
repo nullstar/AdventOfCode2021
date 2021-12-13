@@ -5,8 +5,11 @@
 #include <algorithm>
 #include <functional>
 #include <vector>
+#include <set>
 #include <map>
 #include <bitset>
+#include <assert.h>
+#include <cctype> 
 
 
 
@@ -1248,6 +1251,263 @@ void Day11()
 }
 
 
+struct ICaveNode
+{
+	virtual void Visit() = 0;
+	virtual void Unvisit() = 0;
+	virtual bool CanVisit() const = 0;
+	std::string m_name;
+	std::vector<ICaveNode*> m_connectedNodes;
+};
+
+struct StartCave : public ICaveNode
+{
+	virtual void Visit() override { }
+	virtual void Unvisit() override { }
+	virtual bool CanVisit() const override { return false; }
+};
+
+struct EndCave : public ICaveNode
+{
+	virtual void Visit() override { ++m_numVisits; }
+	virtual void Unvisit() override { }
+	virtual bool CanVisit() const override { return true; }
+	int m_numVisits = 0;
+};
+
+struct SmallCave : public ICaveNode
+{
+	virtual void Visit() override 
+	{ 
+		if(++m_numVisits == 2)
+			s_hasDoubleVisit = true;
+	}
+
+	virtual void Unvisit() override 
+	{ 
+		if(--m_numVisits == 1) 
+			s_hasDoubleVisit = false; 
+	}
+
+	virtual bool CanVisit() const override
+	{
+		if(s_allowDoubleVisits)
+		{
+			const int visitCap = s_hasDoubleVisit ? 1 : 2;
+			return m_numVisits < visitCap;
+		}
+		return m_numVisits < 1;
+	}
+
+	int m_numVisits = 0;
+	static bool s_allowDoubleVisits;
+	static int s_hasDoubleVisit;
+};
+bool SmallCave::s_allowDoubleVisits = false;
+int SmallCave::s_hasDoubleVisit = false;
+
+struct LargeCave : public ICaveNode
+{
+	virtual void Visit() override { }
+	virtual void Unvisit() override { }
+	virtual bool CanVisit() const override { return true; }
+};
+
+void Day12()
+{
+	std::ifstream dataStream("caves.txt");
+
+	// parse cave nodes
+	std::map<std::string, ICaveNode*> caveNodes;
+	StartCave* pStartCave = nullptr;
+	EndCave* pEndCave = nullptr;
+
+	const auto getOrCreateCaveNode = [&](const std::string& name) -> ICaveNode*
+	{
+		const auto caveIter = caveNodes.find(name);
+		if(caveIter != caveNodes.end())
+			return caveIter->second;
+
+		ICaveNode* pCaveNode = nullptr;
+		if(name == "start") { pStartCave = new StartCave(); pCaveNode = pStartCave; }
+		else if(name == "end") { pEndCave = new EndCave(); pCaveNode = pEndCave; }
+		else if(std::isupper(name[0])) { pCaveNode = new LargeCave(); }
+		else { pCaveNode = new SmallCave(); }
+
+		pCaveNode->m_name = name;
+		caveNodes[name] = pCaveNode;
+		return pCaveNode;
+	};
+
+	std::string dataLine;
+	while(std::getline(dataStream, dataLine))
+	{
+		std::stringstream caveStream(dataLine);
+		std::string caveName1;
+		std::string caveName2;
+		std::getline(caveStream, caveName1, '-');
+		std::getline(caveStream, caveName2, '-');
+
+		ICaveNode* pCave1 = getOrCreateCaveNode(caveName1);
+		ICaveNode* pCave2 = getOrCreateCaveNode(caveName2);
+
+		pCave1->m_connectedNodes.push_back(pCave2);
+		pCave2->m_connectedNodes.push_back(pCave1);
+	}
+
+	// we don't want outgoing connections from the end cave since this is the end of the path
+	pEndCave->m_connectedNodes.clear();
+
+	// find paths for puzzle 1
+	std::function<void(ICaveNode*)> findPath;
+	findPath = [&](ICaveNode* pCave) -> void
+	{
+		pCave->Visit();
+		for(ICaveNode* pNextCave : pCave->m_connectedNodes)
+			if(pNextCave->CanVisit())
+				findPath(pNextCave);
+		pCave->Unvisit();
+	};
+
+	findPath(pStartCave);
+	const int numPaths1 = pEndCave->m_numVisits;
+
+	std::cout << "Advent of Code Day 12 Puzzle 1" << std::endl;
+	std::cout << "Num paths = " << numPaths1 << std::endl;
+	std::cout << std::endl;
+
+	// find paths for puzzle 2
+	pEndCave->m_numVisits = 0;
+	SmallCave::s_allowDoubleVisits = true;
+
+	findPath(pStartCave);
+	const int numPaths2 = pEndCave->m_numVisits;
+
+	std::cout << "Advent of Code Day 12 Puzzle 2" << std::endl;
+	std::cout << "Num paths2 = " << numPaths2 << std::endl;
+	std::cout << std::endl;
+
+	// cleanup
+	for(auto caveNodeEntry : caveNodes)
+		delete caveNodeEntry.second;
+}
+
+
+void Day13()
+{
+	std::ifstream dataStream("transparent.txt");
+
+	// index and coord conversion funcs
+	constexpr int32_t split = 2000;
+	
+	const auto getIndex = [split](int32_t x, int32_t y) -> int32_t
+	{
+		return x + y * split;
+	};
+
+	const auto getCoords = [split](int32_t index, int32_t& x, int32_t& y) -> void
+	{
+		x = index % split;
+		y = index / split;
+	};
+
+	// get points
+	std::set<int32_t> points;
+	std::string dataLine;
+	while(std::getline(dataStream, dataLine))
+	{
+		if(dataLine.length() == 0)
+			break;
+
+		std::stringstream inputStream(dataLine);
+		std::string inputData1;
+		std::string inputData2;
+		std::getline(inputStream, inputData1, ',');
+		std::getline(inputStream, inputData2, ',');
+		const int32_t x = std::stoi(inputData1);
+		const int32_t y = std::stoi(inputData2);
+		assert(x < split);
+		assert(y < split);
+		points.insert(getIndex(x, y));
+	}
+
+	// folding function
+	const auto fold = [&]() -> void
+	{
+		std::stringstream inputStream(dataLine);
+		std::string inputData;
+		std::getline(inputStream, inputData, ' ');
+		std::getline(inputStream, inputData, ' ');
+
+		std::getline(inputStream, inputData, '=');
+		const int32_t coordIndex = inputData[0] == 'x' ? 0 : 1;
+
+		std::getline(inputStream, inputData, '=');
+		const int32_t plane = std::stoi(inputData);
+
+		std::set<int32_t> newPoints;
+
+		int32_t coords[2] = {};
+		for(auto pointIter = points.begin(), last = points.end(); pointIter != last;)
+		{
+			getCoords(*pointIter, coords[0], coords[1]);
+			if(coords[coordIndex] > plane)
+			{
+				coords[coordIndex] = 2 * plane - coords[coordIndex];
+				newPoints.insert(getIndex(coords[0], coords[1]));
+				pointIter = points.erase(pointIter);
+			}
+			else
+			{
+				++pointIter;
+			}
+		}
+
+		points.insert(newPoints.begin(), newPoints.end());
+	};
+
+	// do first fold
+	std::getline(dataStream, dataLine);
+	fold();
+
+	std::cout << "Advent of Code Day 13 Puzzle 1" << std::endl;
+	std::cout << "Visible dots after first fold = " << points.size() << std::endl;
+	std::cout << std::endl;
+
+	// complete folds and output results
+	while(std::getline(dataStream, dataLine))
+		fold();
+
+	std::cout << "Advent of Code Day 13 Puzzle 2" << std::endl;
+
+	int32_t lastX = 0;
+	int32_t lastY = 0;
+	for(int32_t point : points)
+	{
+		int32_t x, y;
+		getCoords(point, x, y);
+
+		while(y > lastY)
+		{
+			++lastY = y;
+			lastX = 0;
+			std::cout << std::endl;
+		}
+
+		while(x > lastX + 1)
+		{
+			++lastX;
+			std::cout << ".";
+		}
+
+		lastX = x;
+		std::cout << "#";
+	}
+
+	std::cout << std::endl;
+}
+
+
 
 int main()
 {
@@ -1265,4 +1525,6 @@ int main()
 	Day09();
 	Day10();
 	Day11();
+	Day12();
+	Day13();
 }
