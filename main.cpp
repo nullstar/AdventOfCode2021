@@ -1505,6 +1505,129 @@ void Day13()
 	}
 
 	std::cout << std::endl;
+	std::cout << std::endl;
+}
+
+
+void Day14()
+{
+	std::ifstream dataStream("polymerization.txt");
+
+	// get polymer
+	std::string polymer;
+	std::getline(dataStream, polymer);
+
+	// split polymer into pair count map
+	struct ElementPair
+	{
+		ElementPair(char left, char right) : m_leftElement(left), m_rightElement(right) {}
+		char m_leftElement;
+		char m_rightElement;
+
+		bool operator<(const ElementPair& other) const
+		{
+			return (m_leftElement != other.m_leftElement) ? m_leftElement < other.m_leftElement : m_rightElement < other.m_rightElement;
+		}
+	};
+
+	std::map<ElementPair, uint64_t> polymerPairCounts;
+	for(uint64_t i = 1; i < polymer.size(); ++i)
+	{
+		ElementPair elementPair(polymer[i - 1], polymer[i]);
+		polymerPairCounts.try_emplace(elementPair, 0);
+		++polymerPairCounts[elementPair];
+	}
+
+	// get element counts
+	uint64_t elementCounts[26] = {};
+	for(char element : polymer)
+		++elementCounts[element - 'A'];
+
+	// get pair insertions
+	struct PairInsertion
+	{
+		PairInsertion(char left, char right, char insert)
+			: m_element(insert)
+			, m_inputPair(left, right)
+			, m_outputPairLeft(left, insert)
+			, m_outputPairRight(insert, right)
+		{
+		}
+
+		char m_element;
+		ElementPair m_inputPair;
+		ElementPair m_outputPairLeft;
+		ElementPair m_outputPairRight;
+	};
+	std::vector<PairInsertion> pairInsertions;
+
+	std::string pairInsertionData;
+	std::getline(dataStream, pairInsertionData);
+	while(std::getline(dataStream, pairInsertionData))
+		pairInsertions.push_back(PairInsertion(pairInsertionData[0], pairInsertionData[1], pairInsertionData[6]));
+
+	// insertion function
+	const auto insertElements = [&]() -> void
+	{
+		std::map<ElementPair, uint64_t> prevPolymerPairCounts = polymerPairCounts;
+		for(uint64_t pairIndex = 0; pairIndex < pairInsertions.size(); ++pairIndex)
+		{
+			const PairInsertion& pair = pairInsertions[pairIndex];
+			if(prevPolymerPairCounts.find(pair.m_inputPair) != prevPolymerPairCounts.end())
+			{
+				const uint64_t numPairsInPolymer = prevPolymerPairCounts[pair.m_inputPair];
+				polymerPairCounts[pair.m_inputPair] -= numPairsInPolymer;
+				if(polymerPairCounts[pair.m_inputPair] == 0)
+					polymerPairCounts.erase(pair.m_inputPair);
+
+				polymerPairCounts.try_emplace(pair.m_outputPairLeft, 0);
+				polymerPairCounts[pair.m_outputPairLeft] += numPairsInPolymer;
+
+				polymerPairCounts.try_emplace(pair.m_outputPairRight, 0);
+				polymerPairCounts[pair.m_outputPairRight] += numPairsInPolymer;
+
+				elementCounts[pair.m_element - 'A'] += numPairsInPolymer;
+			}
+		}
+	};
+
+	// find most common and least common elements function
+	const auto findMostAndLeastElementCount = [&](uint64_t& mostCount, uint64_t& leastCount) -> void
+	{
+		mostCount = 0;
+		leastCount = UINT64_MAX;
+
+		for(int i = 0; i < 26; ++i)
+		{
+			if(elementCounts[i] != 0)
+			{
+				leastCount = std::min(leastCount, elementCounts[i]);
+				mostCount = std::max(mostCount, elementCounts[i]);
+			}
+		}
+	};
+
+	// apply insertions for 10 steps
+	for(uint64_t step = 0; step < 10; ++step)
+		insertElements();
+
+	uint64_t mostCount10, leastCount10;
+	findMostAndLeastElementCount(mostCount10, leastCount10);
+
+	std::cout << "Advent of Code Day 14 Puzzle 1" << std::endl;
+	std::cout << "Difference between most and least element after 10 steps = " << mostCount10 - leastCount10 << std::endl;
+	std::cout << std::endl;
+
+	// apply remaining 30 steps of insertions
+	for(uint64_t step = 0; step < 30; ++step)
+		insertElements();
+
+	uint64_t mostCount40, leastCount40;
+	findMostAndLeastElementCount(mostCount40, leastCount40);
+
+	std::cout << "Advent of Code Day 14 Puzzle 2" << std::endl;
+	std::cout << "Difference between most and least element after 40 steps = " << mostCount40 - leastCount40 << std::endl;
+	std::cout << std::endl;
 }
 
 
@@ -1527,4 +1650,5 @@ int main()
 	Day11();
 	Day12();
 	Day13();
+	Day14();
 }
