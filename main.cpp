@@ -1631,6 +1631,145 @@ void Day14()
 }
 
 
+void Day15()
+{
+	std::ifstream dataStream("chitons.txt");
+
+	// get risk grid
+	std::vector<int> riskGrid;
+
+	std::string dataLine;
+	while(std::getline(dataStream, dataLine))
+		for(char ch : dataLine)
+			riskGrid.push_back(ch - '0');
+
+	const int riskGridWidth = dataLine.size();
+	const int riskGridHeight = riskGrid.size() / riskGridWidth;
+
+	// calculate least risk path using dijkstra's algorithm
+	const auto calculateLeastRisk = [](const std::vector<int>& riskGrid, int riskGridWidth, int riskGridHeight) -> int
+	{
+		const int startIndex = 0;
+		const int endIndex = riskGrid.size() - 1;
+
+		const auto coordToIndex = [riskGridWidth](int x, int y) -> int
+		{
+			return x + y * riskGridWidth;
+		};
+
+		const auto indexToCoord = [riskGridWidth](int index, int& x, int& y) -> void
+		{
+			x = index % riskGridWidth;
+			y = index / riskGridWidth;
+		};
+
+		struct Node
+		{
+			int m_totalRisk = INT32_MAX;
+			bool m_visited = false;
+			bool m_toVisit = false;
+		};
+
+		std::vector<Node> nodes;
+		nodes.insert(nodes.begin(), riskGrid.size(), Node());
+
+		nodes[startIndex].m_totalRisk = 0;
+
+		std::vector<Node*> toVisitNodes;
+		toVisitNodes.push_back(&nodes[startIndex]);
+		nodes[startIndex].m_toVisit = true;
+	
+		while(toVisitNodes.size())
+		{
+			// find node to visit with lowest risk
+			Node* pLowestRiskNode = toVisitNodes[0];
+			int lowestRiskUnvisitedIndex = 0;
+			for(int i = 1; i < toVisitNodes.size(); ++i)
+			{
+				if(toVisitNodes[i]->m_totalRisk < pLowestRiskNode->m_totalRisk)
+				{
+					pLowestRiskNode = toVisitNodes[i];
+					lowestRiskUnvisitedIndex = i;
+				}
+			}
+
+			// visit node
+			toVisitNodes[lowestRiskUnvisitedIndex] = toVisitNodes.back();
+			toVisitNodes.pop_back();
+			pLowestRiskNode->m_visited = true;
+			pLowestRiskNode->m_toVisit = false;
+
+			// return total risk if this is the end node
+			const int lowestRiskGridIndex = pLowestRiskNode - nodes.data();
+			if(lowestRiskGridIndex == endIndex)
+				return pLowestRiskNode->m_totalRisk;
+
+			// update path cost to adjacent nodes
+			const auto updateAdjacentPath = [&](int ax, int ay, Node* pCurrentNode) -> void
+			{
+				if(ax < 0 || ax >= riskGridWidth) return;
+				if(ay < 0 || ay >= riskGridHeight) return;
+				int aGridIndex = coordToIndex(ax, ay);
+
+				Node& adjacentNode = nodes[aGridIndex];
+				if(adjacentNode.m_visited == false)
+				{
+					adjacentNode.m_totalRisk = std::min(adjacentNode.m_totalRisk, pCurrentNode->m_totalRisk + riskGrid[aGridIndex]);
+					if(adjacentNode.m_toVisit == false)
+					{
+						toVisitNodes.push_back(&adjacentNode);
+						adjacentNode.m_toVisit = true;
+					}
+				}
+			};
+
+			int x, y;
+			indexToCoord(lowestRiskGridIndex, x, y);
+			updateAdjacentPath(x - 1, y, pLowestRiskNode);
+			updateAdjacentPath(x + 1, y, pLowestRiskNode);
+			updateAdjacentPath(x, y - 1, pLowestRiskNode);
+			updateAdjacentPath(x, y + 1, pLowestRiskNode);
+		}
+
+		return -1;
+	};
+
+	const int leastRisk = calculateLeastRisk(riskGrid, riskGridWidth, riskGridHeight);
+
+	std::cout << "Advent of Code Day 15 Puzzle 1" << std::endl;
+	std::cout << "Lowest risk path = " << leastRisk << std::endl;
+	std::cout << std::endl;
+
+	// expand risk grid
+	std::vector<int> expandedRiskGrid;
+	expandedRiskGrid.resize(riskGrid.size() * 25);
+	const int expandedRiskGridWidth = riskGridWidth * 5;
+	const int expandedRiskGridHeight = riskGridHeight * 5;
+
+	for(int y = 0; y < riskGridHeight; ++y)
+	{
+		for(int x = 0; x < riskGridWidth; ++x)
+		{
+			const int origRisk = riskGrid[x + y * riskGridWidth];
+			for(int my = 0; my < 5; ++my)
+			{
+				for(int mx = 0; mx < 5; ++mx)
+				{
+					const int expandedIndex = x + riskGridWidth * mx + (y + riskGridHeight * my) * expandedRiskGridWidth;
+					expandedRiskGrid[expandedIndex] = ((origRisk + mx + my - 1) % 9) + 1;
+				}
+			}
+		}
+	}
+
+	const int leastRiskExpanded = calculateLeastRisk(expandedRiskGrid, expandedRiskGridWidth, expandedRiskGridHeight);
+
+	std::cout << "Advent of Code Day 15 Puzzle 2" << std::endl;
+	std::cout << "Lowest risk path = " << leastRiskExpanded << std::endl;
+	std::cout << std::endl;
+}
+
+
 
 int main()
 {
@@ -1651,4 +1790,5 @@ int main()
 	Day12();
 	Day13();
 	Day14();
+	Day15();
 }
