@@ -1770,9 +1770,184 @@ void Day15()
 }
 
 
+void Day16()
+{
+	std::ifstream hexDataStream("packetDecoder.txt");
+	std::string hexDataLine;
+	std::getline(hexDataStream, hexDataLine);
+
+	// convert hex data to binary data
+	std::string binaryData;
+	binaryData.reserve(hexDataLine.size() * 4);
+
+	for(char ch : hexDataLine)
+	{
+		std::bitset<4> bits(std::isdigit(ch) ? ch - '0' : ch - 'A' + 10);
+		binaryData += bits.to_string();
+	}
+
+	// parse functions
+	enum class E_PacketType : uint8_t
+	{
+		Sum,
+		Product,
+		Minimum,
+		Maximum,
+		LiteralValue,
+		GreaterThan,
+		LessThan,
+		EqualTo,
+
+		MAX
+	};
+
+	uint64_t readHead = 0;
+	const auto readData = [&](uint64_t size) -> std::string
+	{
+		std::string data = binaryData.substr(readHead, size);
+		readHead += size;
+		return data;
+	};
+
+	const auto readPacketVersion = [&]() -> uint8_t
+	{
+		const std::string packetVersionData = readData(3);
+		const uint8_t packetVersion = std::stoi(packetVersionData, nullptr, 2);
+		return packetVersion;
+	};
+
+	const auto readPacketType = [&]() -> E_PacketType
+	{
+		const std::string packetTypeIdData = readData(3);
+		const uint8_t packetTypeId = std::stoi(packetTypeIdData, nullptr, 2);
+		return (E_PacketType)packetTypeId;
+	};
+
+	const auto readLiteralValue = [&]() -> uint64_t
+	{
+		std::string valueBinary;
+		bool readDigits = true;
+		while(readDigits)
+		{
+			readDigits = readData(1)[0] == '1';
+			valueBinary += readData(4);
+		}
+
+		const uint64_t value = std::stoll(valueBinary, nullptr, 2);
+		return value;
+	};
+
+	// operator functions
+	const auto sumOperator = [](uint64_t lhs, uint64_t rhs) -> uint64_t
+	{
+		return lhs + rhs;
+	};
+
+	const auto productOperator = [](uint64_t lhs, uint64_t rhs) -> uint64_t
+	{
+		return lhs * rhs;
+	};
+
+	const auto minimumOperator = [](uint64_t lhs, uint64_t rhs) -> uint64_t
+	{
+		return lhs < rhs ? lhs : rhs;
+	};
+
+	const auto maximumOperator = [](uint64_t lhs, uint64_t rhs) -> uint64_t
+	{
+		return lhs > rhs ? lhs : rhs;
+	};
+
+	const auto greaterThanOperator = [](uint64_t lhs, uint64_t rhs) -> uint64_t
+	{
+		return lhs > rhs ? 1 : 0;
+	};
+
+	const auto lessThanOperator = [](uint64_t lhs, uint64_t rhs) -> uint64_t
+	{
+		return lhs < rhs ? 1 : 0;
+	};
+
+	const auto equalToOperator = [](uint64_t lhs, uint64_t rhs) -> uint64_t
+	{
+		return lhs == rhs ? 1 : 0;
+	};
+
+	const auto nullOperator = [](uint64_t lhs, uint64_t rhs) -> uint64_t
+	{
+		assert(false);
+		return 0;
+	};
+
+	std::function<uint64_t(uint64_t, uint64_t)> operatorFunctions[(uint8_t)E_PacketType::MAX] = {
+		sumOperator,
+		productOperator,
+		minimumOperator,
+		maximumOperator,
+		nullOperator,
+		greaterThanOperator,
+		lessThanOperator,
+		equalToOperator };
+
+	// read packet function
+	std::function<uint64_t(uint64_t&)> readPacket;
+	readPacket = [&](uint64_t& versionNumberTotal) -> uint64_t
+	{
+		const uint8_t packetVersion = readPacketVersion();
+		versionNumberTotal += packetVersion;
+
+		const E_PacketType packetType = readPacketType();
+		switch(packetType)
+		{
+		case E_PacketType::LiteralValue:
+			return readLiteralValue();
+
+		default:
+			if(readData(1)[0] == '0')
+			{
+				const uint64_t numBitsInSubpackets = std::stoi(readData(15), nullptr, 2);
+				uint64_t startRead = readHead;
+				uint64_t lhs = readPacket(versionNumberTotal);
+				while(readHead - startRead < numBitsInSubpackets)
+				{
+					const uint64_t rhs = readPacket(versionNumberTotal);
+					lhs = operatorFunctions[(uint8_t)packetType](lhs, rhs);
+				}
+				return lhs;
+			}
+			else
+			{
+				const uint64_t numSubpackets = std::stoi(readData(11), nullptr, 2);
+				uint64_t lhs = readPacket(versionNumberTotal);
+				for(uint64_t i = 1; i < numSubpackets; ++i)
+				{
+					const uint64_t rhs = readPacket(versionNumberTotal);
+					lhs = operatorFunctions[(uint8_t)packetType](lhs, rhs);
+				}
+				return lhs;
+			}
+			break;
+		}
+	};
+
+	// parse packets
+	uint64_t versionNumberTotal = 0;
+	uint64_t packetValue = readPacket(versionNumberTotal);
+
+	std::cout << "Advent of Code Day 16 Puzzle 1" << std::endl;
+	std::cout << "Version Number Total = " << versionNumberTotal << std::endl;
+	std::cout << std::endl;
+
+	std::cout << "Advent of Code Day 16 Puzzle 2" << std::endl;
+	std::cout << "Packet value = " << packetValue << std::endl;
+	std::cout << std::endl;
+}
+
+
 
 int main()
 {
+	/*
 	Day01Puzzle1();
 	Day01Puzzle2();
 	Day02Puzzle1();
@@ -1791,4 +1966,6 @@ int main()
 	Day13();
 	Day14();
 	Day15();
+	*/
+	Day16();
 }
