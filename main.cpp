@@ -1944,6 +1944,72 @@ void Day16()
 }
 
 
+void Day17()
+{
+	constexpr int targetMinX = 81;
+	constexpr int targetMaxX = 129;
+	constexpr int targetMinY = -150;
+	constexpr int targetMaxY = -108;
+
+	// The probe is garaunteed to hit y = 0 with the negative of its launch speed on the way down.
+	// How large can we make this speed and place ourselves in the target?
+	// This will be the distance to the lowest target Y minus one for added gravity
+	const int maxLaunchSpeedY = -targetMinY - 1;
+
+	// what is the highest y we can reach
+	int highestYPos = 0;
+	int ySpeed = maxLaunchSpeedY;
+	while(ySpeed > 0)
+	{
+		highestYPos += ySpeed;
+		--ySpeed;
+	}
+
+	std::cout << "Advent of Code Day 17 Puzzle 1" << std::endl;
+	std::cout << "Highest Y Pos = " << highestYPos << std::endl;
+	std::cout << std::endl;
+
+	// the mininum launch y speed takes us to the furthest edge of the target in one step
+	const int minLaunchSpeedY = targetMinY;
+
+	// the maximum x launch speed takes us to the furthest target x within one step
+	int maxLaunchSpeedX = targetMaxX;
+
+	// calculate number of valid launches
+	int numValidLanuches = 0;
+	for(int launchX = 1; launchX <= maxLaunchSpeedX; ++launchX)
+	{
+		for(int launchY = minLaunchSpeedY; launchY <= maxLaunchSpeedY; ++launchY)
+		{
+			int xPos = 0;
+			int yPos = 0;
+			int xSpeed = launchX;
+			int ySpeed = launchY;
+
+			while(xPos < targetMaxX && yPos > targetMinY)
+			{
+				xPos += xSpeed;
+				yPos += ySpeed;
+
+				if(xPos >= targetMinX && xPos <= targetMaxX
+					&& yPos >= targetMinY && yPos <= targetMaxY)
+				{
+					++numValidLanuches;
+					break;
+				}
+
+				xSpeed = std::max(xSpeed - 1, 0);
+				--ySpeed;
+			}
+		}
+	}
+
+	std::cout << "Advent of Code Day 17 Puzzle 2" << std::endl;
+	std::cout << "Num valid launches = " << numValidLanuches << std::endl;
+	std::cout << std::endl;
+}
+
+
 
 int main()
 {
@@ -1966,6 +2032,7 @@ int main()
 	Day13();
 	Day14();
 	Day15();
-	*/
 	Day16();
+	*/
+	Day17();
 }
